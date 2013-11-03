@@ -8,6 +8,7 @@ namespace rambo.Implementation
         private readonly EventHandlerList eventHandlers;
         private readonly object ReadAckEvent = new object();
         private readonly object WriteAckEvent = new object();
+        private readonly object JoinAckEvent = new object();
 
         public ReaderWriter()
         {
@@ -44,6 +45,12 @@ namespace rambo.Implementation
         {
             add { eventHandlers.AddHandler(WriteAckEvent, value); }
             remove { eventHandlers.RemoveHandler(WriteAckEvent, value); }
+        }
+
+        public event JoinAckEventHandler JoinAck
+        {
+            add { eventHandlers.AddHandler(JoinAckEvent, value); }
+            remove { eventHandlers.RemoveHandler(JoinAckEvent, value); }
         }
     }
 }

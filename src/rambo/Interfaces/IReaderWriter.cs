@@ -18,5 +18,6 @@
 
         event ReadAckEventHandler ReadAck;
         event WriteAckEventHandler WriteAck;
+        event JoinAckEventHandler JoinAck;
     }
 }

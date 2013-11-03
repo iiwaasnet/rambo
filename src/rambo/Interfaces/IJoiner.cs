@@ -11,7 +11,5 @@ namespace rambo.Interfaces
         void Fail();
 
         event RamboJoinAckEventHandler JoinAck;
-
-        void SetLocalReaderWriter(IReaderWriter readerWriter);
     }
 }

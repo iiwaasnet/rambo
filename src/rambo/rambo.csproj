@@ -83,6 +83,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Implementation\NodeStatus.cs" />
+    <Compile Include="Implementation\Recon.cs" />
     <Compile Include="Interfaces\IBody.cs" />
     <Compile Include="Interfaces\IConfiguration.cs" />
     <Compile Include="Interfaces\IConfigurationIndex.cs" />
@@ -96,6 +98,8 @@
     <Compile Include="Interfaces\IReaderWriter.cs" />
     <Compile Include="Implementation\Rambo.cs" />
     <Compile Include="Implementation\ReaderWriter.cs" />
+    <Compile Include="Interfaces\IRecon.cs" />
+    <Compile Include="Interfaces\Joiner.cs" />
     <Compile Include="MainModule.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

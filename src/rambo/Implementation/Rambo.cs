@@ -10,24 +10,24 @@ namespace rambo.Implementation
     {
         private readonly IJoiner joiner;
         private readonly IReaderWriter readerWriter;
+        private readonly IRecon recon; 
         private readonly EventHandlerList eventHandlers;
         private readonly object ReadAckEvent = new object();
         private readonly object WriteAckEvent = new object();
 
-        public Rambo(IJoiner joiner, IReaderWriter readerWriter)
+        public Rambo()
         {
-            Contract.Requires(joiner != null);
-            Contract.Requires(readerWriter != null);
-
             eventHandlers = new EventHandlerList();
-            this.readerWriter = readerWriter;
-            this.joiner = joiner;
+            readerWriter = new ReaderWriter();
+            recon = new Recon();
+
+            joiner = new Joiner(readerWriter, recon);
+            
             ConfigureService();
         }
 
         private void ConfigureService()
         {
-            joiner.SetLocalReaderWriter(readerWriter);
             readerWriter.ReadAck += OnReadAck;
             readerWriter.WriteAck += OnWriteAck;
         }
