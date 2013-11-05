@@ -83,9 +83,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Implementation\AtomicObservable.cs" />
+    <Compile Include="Interfaces\IPrecondition.cs" />
     <Compile Include="Implementation\NodeStatus.cs" />
+    <Compile Include="Implementation\Precondition.cs" />
     <Compile Include="Implementation\Recon.cs" />
+    <Compile Include="Interfaces\IAtomicObservable.cs" />
     <Compile Include="Interfaces\IBody.cs" />
+    <Compile Include="Interfaces\IChangeNotifiable.cs" />
     <Compile Include="Interfaces\IConfiguration.cs" />
     <Compile Include="Interfaces\IConfigurationIndex.cs" />
     <Compile Include="Interfaces\IEnvelope.cs" />
@@ -94,12 +99,14 @@
     <Compile Include="Interfaces\INode.cs" />
     <Compile Include="Interfaces\IObjectId.cs" />
     <Compile Include="Interfaces\IObjectValue.cs" />
+    <Compile Include="Interfaces\IObservableCondition.cs" />
     <Compile Include="Interfaces\IRambo.cs" />
     <Compile Include="Interfaces\IReaderWriter.cs" />
     <Compile Include="Implementation\Rambo.cs" />
     <Compile Include="Implementation\ReaderWriter.cs" />
     <Compile Include="Interfaces\IRecon.cs" />
-    <Compile Include="Interfaces\Joiner.cs" />
+    <Compile Include="Implementation\Joiner.cs" />
+    <Compile Include="Implementation\ObservableCondition.cs" />
     <Compile Include="MainModule.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

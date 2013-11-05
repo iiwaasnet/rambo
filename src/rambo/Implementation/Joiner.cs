@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using rambo.Implementation;
+using rambo.Interfaces;
 
-namespace rambo.Interfaces
+namespace rambo.Implementation
 {
     public class Joiner : IJoiner
     {
@@ -21,7 +21,7 @@ namespace rambo.Interfaces
 
         private void ReaderWriterJoinAck(INode node)
         {
-            throw new NotImplementedException();
+            new Precondition(() => { });
         }
 
         private void ReconJoinAck(INode node)
