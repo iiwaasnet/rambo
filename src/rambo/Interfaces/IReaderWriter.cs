@@ -8,7 +8,7 @@
 
         void Fail();
 
-        void Join();
+        void Join(INode i);
 
         //void NewConfig(IConfiguration c, IConfigurationIndex k);
 

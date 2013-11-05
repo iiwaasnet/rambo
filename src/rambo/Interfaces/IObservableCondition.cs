@@ -1,7 +1,9 @@
-﻿namespace rambo.Interfaces
+﻿using System.Threading;
+
+namespace rambo.Interfaces
 {
-    public interface IObservableCondition : IChangeNotifiable
+    public interface IObservableCondition
     {
-        bool Evaluate();       
+        WaitHandle Waitable { get; }
     }
 }
