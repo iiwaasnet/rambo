@@ -85,7 +85,6 @@
   <ItemGroup>
     <Compile Include="Implementation\AtomicObservable.cs" />
     <Compile Include="Implementation\NodeStatus.cs" />
-    <Compile Include="Implementation\Precondition.cs" />
     <Compile Include="Implementation\Recon.cs" />
     <Compile Include="Interfaces\IAtomicObservable.cs" />
     <Compile Include="Interfaces\IBody.cs" />

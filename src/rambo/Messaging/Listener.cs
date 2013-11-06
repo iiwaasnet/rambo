@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using rambo.Interfaces;
 
 namespace rambo.Messaging
 {
@@ -10,7 +11,7 @@ namespace rambo.Messaging
 		private readonly BlockingCollection<IMessage> messages;
 		private readonly Thread notifyThread;
 
-		public Listener(IProcess subscriber)
+		public Listener(INode subscriber)
 		{
 			Subscriber = subscriber;
 			observers = new ConcurrentDictionary<IObserver<IMessage>, object>();
@@ -57,7 +58,7 @@ namespace rambo.Messaging
 			messages.CompleteAdding();
 		}
 
-		public IProcess Subscriber { get; private set; }
+		public INode Subscriber { get; private set; }
 
 		private class Unsubscriber : IDisposable
 		{

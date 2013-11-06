@@ -1,8 +1,10 @@
-﻿namespace rambo.Messaging
+﻿using rambo.Interfaces;
+
+namespace rambo.Messaging
 {
 	public class ForwardRequest
 	{
-		public IProcess Recipient { get; set; }
+		public INode Recipient { get; set; }
 
 		public IMessage Message { get; set; }
 	}

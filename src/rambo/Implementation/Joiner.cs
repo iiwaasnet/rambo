@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using rambo.Interfaces;
+using rambo.Messaging;
 
 namespace rambo.Implementation
 {
@@ -16,7 +17,9 @@ namespace rambo.Implementation
         private readonly IAtomicObservable<IEnumerable<INode>> hints;
         private readonly IObservableCondition preJoinRW;
         private readonly IObservableCondition preJoinRecon;
+        private readonly IObservableCondition preJoin;
         private readonly INode i;
+        private readonly IListener listener;
 
         public Joiner(INode i, IReaderWriter readerWriter, IRecon recon, IMessageHub messageHub)
         {
@@ -30,11 +33,37 @@ namespace rambo.Implementation
                                                 new[] {status, rwStatus});
             preJoinRecon = new ObservableCondition(() => status.Get() == NodeStatus.Joining && reconStatus.Get() == NodeStatus.Idle,
                                                 new[] {status, reconStatus});
+            preJoin = new ObservableCondition(() => status.Get() == NodeStatus.Joining, new[] {status});
 
             this.recon = recon;
             this.recon.JoinAck += ReconJoinAck;
             this.readerWriter = readerWriter;
             this.readerWriter.JoinAck += ReaderWriterJoinAck;
+
+            listener = messageHub.Subscribe(this.i);
+            listener.Subscribe();
+            new Thread(OutJoinRw).Start();
+            new Thread(OutJoinRecon).Start();
+        }
+
+        private void OutJoinRecon()
+        {
+            while (true)
+            {
+                preJoinRecon.Waitable.WaitOne();
+                recon.Join(i);
+                reconStatus.Set(NodeStatus.Joining);
+            }
+        }
+
+        private void OutJoinRw()
+        {
+            while (true)
+            {
+                preJoinRW.Waitable.WaitOne();
+                readerWriter.Join(i);
+                rwStatus.Set(NodeStatus.Joining);
+            }
         }
 
         private void ReaderWriterJoinAck(INode node)
@@ -58,30 +87,6 @@ namespace rambo.Implementation
         public void Fail()
         {
             throw new System.NotImplementedException();
-        }
-
-        private void DoLocallyControlledActions()
-        {
-            while (true)
-            {
-                var index = WaitHandle.WaitAny(new[] {preJoinRW.Waitable, preJoinRecon.Waitable});
-
-                switch (index)
-                {
-                    case WaitHandle.WaitTimeout:
-                        break;
-                    case 0:
-                        readerWriter.Join(i);
-                        rwStatus.Set(NodeStatus.Joining);
-                        break;
-                    case 1:
-                        recon.Join(i);
-                        reconStatus.Set(NodeStatus.Joining);
-                        break;
-                    default:
-                        break;
-                }
-            }
         }
 
         public event RamboJoinAckEventHandler JoinAck;

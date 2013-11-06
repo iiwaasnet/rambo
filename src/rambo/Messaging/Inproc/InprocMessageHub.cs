@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
+using rambo.Interfaces;
 
 namespace rambo.Messaging.Inproc
 {
@@ -20,7 +21,7 @@ namespace rambo.Messaging.Inproc
             new Thread(BroadcastMessages).Start();
         }
 
-        public IListener Subscribe(IProcess subscriber)
+        public IListener Subscribe(INode subscriber)
         {
             var listener = new Listener(subscriber);
             subscriptions.Add(listener);
@@ -33,7 +34,7 @@ namespace rambo.Messaging.Inproc
             broadcast.Add(new BroadcastRequest {Message = message});
         }
 
-        public void Send(IProcess recipient, IMessage message)
+        public void Send(INode recipient, IMessage message)
         {
             p2p.Add(new ForwardRequest {Recipient = recipient, Message = message});
         }

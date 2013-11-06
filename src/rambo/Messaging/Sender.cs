@@ -1,7 +1,9 @@
-﻿namespace rambo.Messaging
+﻿using rambo.Interfaces;
+
+namespace rambo.Messaging
 {
 	public class Sender : ISender
 	{
-		public IProcess Process { get; set; }
+		public INode Process { get; set; }
 	}
 }
