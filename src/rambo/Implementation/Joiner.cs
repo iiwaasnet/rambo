@@ -18,7 +18,7 @@ namespace rambo.Implementation
         private readonly IObservableCondition preJoinRecon;
         private readonly INode i;
 
-        public Joiner(INode i, IReaderWriter readerWriter, IRecon recon)
+        public Joiner(INode i, IReaderWriter readerWriter, IRecon recon, IMessageHub messageHub)
         {
             this.i = i;
             status = new AtomicObservable<NodeStatus>(NodeStatus.Idle);

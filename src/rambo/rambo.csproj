@@ -107,6 +107,20 @@
     <Compile Include="Implementation\Joiner.cs" />
     <Compile Include="Implementation\ObservableCondition.cs" />
     <Compile Include="MainModule.cs" />
+    <Compile Include="Messaging\Body.cs" />
+    <Compile Include="Messaging\BroadcastRequest.cs" />
+    <Compile Include="Messaging\Envelope.cs" />
+    <Compile Include="Messaging\FLeaseMessageType.cs" />
+    <Compile Include="Messaging\ForwardRequest.cs" />
+    <Compile Include="Messaging\IBody.cs" />
+    <Compile Include="Messaging\IEnvelope.cs" />
+    <Compile Include="Messaging\IListener.cs" />
+    <Compile Include="Messaging\IMessage.cs" />
+    <Compile Include="Messaging\IMessageHub.cs" />
+    <Compile Include="Messaging\Inproc\InprocMessageHub.cs" />
+    <Compile Include="Messaging\ISender.cs" />
+    <Compile Include="Messaging\Listener.cs" />
+    <Compile Include="Messaging\Sender.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
