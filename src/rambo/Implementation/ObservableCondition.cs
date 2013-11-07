@@ -8,12 +8,12 @@ namespace rambo.Implementation
     public class ObservableCondition : IObservableCondition
     {
         private readonly Func<bool> condition;
-        private readonly AutoResetEvent waitHandle;
+        private readonly EventWaitHandle waitHandle;
 
         public ObservableCondition(Func<bool> condition, IEnumerable<IChangeNotifiable> members)
         {
             this.condition = condition;
-            waitHandle = new AutoResetEvent(false);
+            waitHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
 
             BindEventHandlers(members);
         }

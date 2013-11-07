@@ -84,16 +84,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Implementation\AtomicObservable.cs" />
+    <Compile Include="Implementation\Messages\MessageTypes.cs" />
     <Compile Include="Implementation\NodeStatus.cs" />
     <Compile Include="Implementation\Recon.cs" />
     <Compile Include="Interfaces\IAtomicObservable.cs" />
-    <Compile Include="Interfaces\IBody.cs" />
     <Compile Include="Interfaces\IChangeNotifiable.cs" />
     <Compile Include="Interfaces\IConfiguration.cs" />
     <Compile Include="Interfaces\IConfigurationIndex.cs" />
-    <Compile Include="Interfaces\IEnvelope.cs" />
     <Compile Include="Interfaces\IJoiner.cs" />
-    <Compile Include="Interfaces\IMessage.cs" />
     <Compile Include="Interfaces\INode.cs" />
     <Compile Include="Interfaces\IObjectId.cs" />
     <Compile Include="Interfaces\IObjectValue.cs" />
@@ -109,7 +107,6 @@
     <Compile Include="Messaging\Body.cs" />
     <Compile Include="Messaging\BroadcastRequest.cs" />
     <Compile Include="Messaging\Envelope.cs" />
-    <Compile Include="Messaging\FLeaseMessageType.cs" />
     <Compile Include="Messaging\ForwardRequest.cs" />
     <Compile Include="Messaging\IBody.cs" />
     <Compile Include="Messaging\IEnvelope.cs" />
@@ -119,6 +116,7 @@
     <Compile Include="Messaging\Inproc\InprocMessageHub.cs" />
     <Compile Include="Messaging\ISender.cs" />
     <Compile Include="Messaging\Listener.cs" />
+    <Compile Include="Implementation\Messages\JoinRwMessage.cs" />
     <Compile Include="Messaging\Sender.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
