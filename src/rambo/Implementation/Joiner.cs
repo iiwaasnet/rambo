@@ -22,7 +22,6 @@ namespace rambo.Implementation
         private readonly IObservableCondition preJoin;
         private readonly IObservableCondition preJoinAck;
         private readonly INode i;
-        private readonly IListener listener;
         private readonly IMessageHub messageHub;
         private readonly object JoinAckEvent = new object();
 
@@ -49,12 +48,10 @@ namespace rambo.Implementation
                                                  new[] {status, rwStatus, reconStatus});
 
             this.recon = recon;
-            this.recon.JoinAck += ReaderWriterJoinAck;
+            this.recon.JoinAck += JoinAckReaderWriter;
             this.readerWriter = readerWriter;
-            this.readerWriter.JoinAck += ReconJoinAck;
+            this.readerWriter.JoinAck += JoinAckRecon;
 
-            listener = messageHub.Subscribe(this.i);
-            listener.Subscribe();
             new Thread(OutJoinRw).Start();
             new Thread(OutJoinRecon).Start();
             new Thread(OutSend).Start();
@@ -76,6 +73,7 @@ namespace rambo.Implementation
         private void OutSend()
         {
             preJoin.Waitable.WaitOne();
+
             foreach (var node in hints.Get())
             {
                 messageHub.Send(node, new JoinRwMessage(i));
@@ -96,13 +94,13 @@ namespace rambo.Implementation
             rwStatus.Set(NodeStatus.Joining);
         }
 
-        private void ReconJoinAck(INode node)
+        private void JoinAckRecon(INode node)
         {
             preJoin.Waitable.WaitOne();
             reconStatus.Set(NodeStatus.Active);
         }
 
-        private void ReaderWriterJoinAck(INode node)
+        private void JoinAckReaderWriter(INode node)
         {
             preJoin.Waitable.WaitOne();
             rwStatus.Set(NodeStatus.Active);
