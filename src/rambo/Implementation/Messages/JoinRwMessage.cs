@@ -7,7 +7,7 @@ namespace rambo.Implementation.Messages
     {
         public JoinRwMessage(INode i)
         {
-            Envelope = new Envelope {Sender = new Sender {Process = i}};
+            Envelope = new Envelope {Sender = new Sender {Node = i}};
             Body = new Body
                    {
                        MessageType = MessageTypes.JoinRw.ToMessageType(),

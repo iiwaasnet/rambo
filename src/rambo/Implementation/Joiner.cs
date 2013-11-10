@@ -58,6 +58,9 @@ namespace rambo.Implementation
             new Thread(OutJoinAck).Start();
         }
 
+        /// <summary>
+        /// join-ack(rambo)i
+        /// </summary>
         private void OutJoinAck()
         {
             preJoinAck.Waitable.WaitOne();
@@ -70,6 +73,9 @@ namespace rambo.Implementation
             }
         }
 
+        /// <summary>
+        /// send(join)i;j , j E I - {i}
+        /// </summary>
         private void OutSend()
         {
             preJoin.Waitable.WaitOne();
@@ -80,6 +86,9 @@ namespace rambo.Implementation
             }
         }
 
+        /// <summary>
+        /// Output join(r)i, r E frecon
+        /// </summary>
         private void OutJoinRecon()
         {
             preJoinRecon.Waitable.WaitOne();
@@ -87,6 +96,9 @@ namespace rambo.Implementation
             reconStatus.Set(NodeStatus.Joining);
         }
 
+        /// <summary>
+        /// Output join(r)i, r E rw
+        /// </summary>
         private void OutJoinRw()
         {
             preJoinRw.Waitable.WaitOne();
@@ -94,18 +106,30 @@ namespace rambo.Implementation
             rwStatus.Set(NodeStatus.Joining);
         }
 
+        /// <summary>
+        /// join-ack(r)i
+        /// </summary>
+        /// <param name="node"></param>
         private void JoinAckRecon(INode node)
         {
             preJoin.Waitable.WaitOne();
             reconStatus.Set(NodeStatus.Active);
         }
 
+        /// <summary>
+        /// join-ack(r)i
+        /// </summary>
+        /// <param name="node"></param>
         private void JoinAckReaderWriter(INode node)
         {
             preJoin.Waitable.WaitOne();
             rwStatus.Set(NodeStatus.Active);
         }
 
+        /// <summary>
+        /// Input join(rambo; J)i
+        /// </summary>
+        /// <param name="initialWorld"></param>
         public void Join(IEnumerable<INode> initialWorld)
         {
             // TODO: Entry point.

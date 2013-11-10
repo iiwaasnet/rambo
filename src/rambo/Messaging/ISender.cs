@@ -4,6 +4,6 @@ namespace rambo.Messaging
 {
 	public interface ISender
 	{
-		INode Process { get; }
+		INode Node { get; }
 	}
 }
