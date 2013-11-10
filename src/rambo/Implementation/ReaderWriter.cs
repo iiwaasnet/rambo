@@ -9,33 +9,70 @@ using rambo.Messaging;
 
 namespace rambo.Implementation
 {
-    public class ReaderWriter : IReaderWriter
+    public class ReaderWriter<T> : IReaderWriter
     {
         private readonly IAtomicObservable<NodeStatus> status;
         private readonly ConcurrentDictionary<int, INode> world;
         private readonly INode creator;
-        private IObjectValue value;
+        private IObjectValue<T> value;
         private ITag tag;
-        private IPhase localPhase;
-        private readonly ConcurrentDictionary<INode, IPhase> phaseVector;
-        private readonly ConcurrentDictionary<IPhase, IConfiguration> configMap;
+        private readonly IPhaseNumber localPhase;
+        private readonly ConcurrentDictionary<INode, IPhaseNumber> phaseVector;
+        private readonly ConcurrentDictionary<IConfigurationIndex, IConfiguration> configMap;
         private readonly EventHandlerList eventHandlers;
         private readonly IObservableCondition preJoinAck;
         private readonly object ReadAckEvent = new object();
         private readonly object WriteAckEvent = new object();
         private readonly object JoinAckEvent = new object();
+        private readonly CurrentOperation op;
+        private readonly BlockingCollection<OperationRequest> operationQueue;
 
-        public ReaderWriter(INode creator, IMessageHub messageHub)
+        public ReaderWriter(INode creator,
+                            IMessageHub messageHub,
+                            ConcurrentDictionary<IConfigurationIndex, IConfiguration> configMap)
         {
+            op = new CurrentOperation
+                 {
+                     Phase = new AtomicObservable<OperationPhase>(OperationPhase.Idle)
+                 };
             this.creator = creator;
+            this.configMap = configMap;
+            value = new ObjectValue<T>
+                    {
+                        Value = default(T)
+                    };
+            tag = new Tag(creator);
+            localPhase = new PhaseNumber();
+            operationQueue = new BlockingCollection<OperationRequest>(new ConcurrentQueue<OperationRequest>());
             eventHandlers = new EventHandlerList();
             status = new AtomicObservable<NodeStatus>(NodeStatus.Idle);
             world = new ConcurrentDictionary<int, INode>();
+
             preJoinAck = new ObservableCondition(() => status.Get() == NodeStatus.Active, new[] {status});
+            new Thread(ProcessReadWriteREquests).Start();
             new Thread(OutJoinAck).Start();
             var listener = messageHub.Subscribe(creator);
             listener.Where(m => m.Body.MessageType.ToMessageType() == MessageTypes.JoinRw)
                     .Subscribe(new MessageStreamListener(OnJoinReceived));
+        }
+
+        // TODO: Think of queueing recon() and fail() operations to be executed sequentually
+        private void ProcessReadWriteREquests()
+        {
+            foreach (var operationRequest in operationQueue.GetConsumingEnumerable())
+            {
+                switch (operationRequest.OpType)
+                {
+                    case OperationType.Read:
+                        InternalRead(operationRequest.Id);
+                        break;
+                    case OperationType.Write:
+                        InternalWrite(operationRequest.Id, operationRequest.Value);
+                        break;
+                }
+            }
+
+            operationQueue.Dispose();
         }
 
         /// <summary>
@@ -44,10 +81,15 @@ namespace rambo.Implementation
         /// <param name="obj"></param>
         private void OnJoinReceived(IMessage obj)
         {
-            if (!new[] {NodeStatus.Failed, NodeStatus.Idle}.Contains(status.Get()))
+            if (!IsIdleOrFailed())
             {
                 world[obj.Envelope.Sender.Node.Id] = obj.Envelope.Sender.Node;
             }
+        }
+
+        private bool IsIdleOrFailed()
+        {
+            return new[] {NodeStatus.Failed, NodeStatus.Idle}.Contains(status.Get());
         }
 
         /// <summary>
@@ -58,25 +100,50 @@ namespace rambo.Implementation
             preJoinAck.Waitable.WaitOne();
 
             var handler = eventHandlers[JoinAckEvent] as JoinAckEventHandler;
-            if(handler != null)
+            if (handler != null)
             {
                 handler(creator);
             }
         }
 
+        private void InternalRead(IObjectId x)
+        {
+            if (!IsIdleOrFailed())
+            {
+                localPhase.Increment();
+                op.PhaseNumber = localPhase;
+                op.ConfigurationMap =
+                    op.Accepted = new ConcurrentDictionary<int, INode>();
+                op.Phase.Set(OperationPhase.Query);
+                op.Type.Set(OperationType.Read);
+            }
+        }
+
         public void Read(IObjectId x)
         {
-            throw new System.NotImplementedException();
+            operationQueue.Add(new OperationRequest {OpType = OperationType.Read, Id = x});
         }
 
         public void Write(IObjectId x, IObjectValue v)
         {
-            throw new System.NotImplementedException();
+            operationQueue.Add(new OperationRequest
+                               {
+                                   OpType = OperationType.Write,
+                                   Id = x,
+                                   Value = v
+                               });
+        }
+
+        private void InternalWrite(IObjectId x, IObjectValue v)
+        {
+            if (!IsIdleOrFailed())
+            {
+            }
         }
 
         public void Fail()
         {
-            throw new System.NotImplementedException();
+            status.Set(NodeStatus.Failed);
         }
 
         /// <summary>

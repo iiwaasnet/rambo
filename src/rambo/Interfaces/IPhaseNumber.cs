@@ -1,7 +1,9 @@
 ﻿namespace rambo.Interfaces
 {
-    public interface IPhase
+    public interface IPhaseNumber
     {
         int Number { get; }
+
+        void Increment();
     }
 }

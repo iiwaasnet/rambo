@@ -96,9 +96,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Implementation\AtomicObservable.cs" />
+    <Compile Include="Implementation\CurrentOperation.cs" />
     <Compile Include="Implementation\MessageStreamListener.cs" />
     <Compile Include="Implementation\Messages\MessageTypes.cs" />
     <Compile Include="Implementation\NodeStatus.cs" />
+    <Compile Include="Implementation\OperationPhase.cs" />
+    <Compile Include="Implementation\OperationRequest.cs" />
+    <Compile Include="Implementation\OperationType.cs" />
     <Compile Include="Implementation\Recon.cs" />
     <Compile Include="Interfaces\IAtomicObservable.cs" />
     <Compile Include="Interfaces\IChangeNotifiable.cs" />
@@ -109,7 +113,7 @@
     <Compile Include="Interfaces\IObjectId.cs" />
     <Compile Include="Interfaces\IObjectValue.cs" />
     <Compile Include="Interfaces\IObservableCondition.cs" />
-    <Compile Include="Interfaces\IPhase.cs" />
+    <Compile Include="Interfaces\IPhaseNumber.cs" />
     <Compile Include="Interfaces\IRambo.cs" />
     <Compile Include="Interfaces\IReaderWriter.cs" />
     <Compile Include="Implementation\Rambo.cs" />
@@ -118,6 +122,9 @@
     <Compile Include="Implementation\Joiner.cs" />
     <Compile Include="Implementation\ObservableCondition.cs" />
     <Compile Include="Interfaces\ITag.cs" />
+    <Compile Include="Implementation\PhaseNumber.cs" />
+    <Compile Include="Implementation\ObjectValue.cs" />
+    <Compile Include="Implementation\Tag.cs" />
     <Compile Include="MainModule.cs" />
     <Compile Include="Messaging\Body.cs" />
     <Compile Include="Messaging\BroadcastRequest.cs" />

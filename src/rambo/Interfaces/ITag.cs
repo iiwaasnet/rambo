@@ -2,7 +2,8 @@
 {
     public interface ITag
     {
+        void Increment();
         bool GreaterThan(ITag t);
-        string Tag { get; }
+        string Value { get; }
     }
 }
