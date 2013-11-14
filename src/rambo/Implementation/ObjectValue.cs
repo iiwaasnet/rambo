@@ -2,8 +2,8 @@
 
 namespace rambo.Implementation
 {
-    class ObjectValue<T> : IObjectValue<T>
+    class ObjectValue : IObjectValue
     {
-        public T Value { get; set; }
+        public object Value { get; set; }
     }
 }

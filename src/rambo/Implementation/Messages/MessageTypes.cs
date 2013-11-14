@@ -4,12 +4,14 @@ namespace rambo.Implementation.Messages
 {
     public enum MessageTypes
     {
-        JoinRw
+        JoinRw,
+        Gossip
     }
 
     public static class MessageTypesExtensions
     {
         private const string JoinRwMessage = "JOINRW";
+        private const string GossipMessage = "GOSSIP";
 
         public static string ToMessageType(this MessageTypes msgType)
         {
@@ -17,6 +19,8 @@ namespace rambo.Implementation.Messages
             {
                 case MessageTypes.JoinRw:
                     return JoinRwMessage;
+                case MessageTypes.Gossip:
+                    return GossipMessage;
                 default:
                     throw new NotImplementedException(string.Format("{0}", msgType));
             }
@@ -28,7 +32,8 @@ namespace rambo.Implementation.Messages
             {
                 case JoinRwMessage:
                     return MessageTypes.JoinRw;
-
+                case GossipMessage:
+                    return MessageTypes.Gossip;
                 default:
                     throw new NotImplementedException(string.Format("{0}", msgType));
             }

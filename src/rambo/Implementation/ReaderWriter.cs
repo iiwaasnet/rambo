@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reactive.Linq;
@@ -9,38 +10,41 @@ using rambo.Messaging;
 
 namespace rambo.Implementation
 {
-    public class ReaderWriter<T> : IReaderWriter
+    public class ReaderWriter : IReaderWriter
     {
         private readonly IAtomicObservable<NodeStatus> status;
         private readonly ConcurrentDictionary<int, INode> world;
         private readonly INode creator;
-        private IObjectValue<T> value;
-        private ITag tag;
+        private IObjectValue value;
+        private readonly ITag tag;
         private readonly IPhaseNumber localPhase;
         private readonly ConcurrentDictionary<INode, IPhaseNumber> phaseVector;
         private readonly ConcurrentDictionary<IConfigurationIndex, IConfiguration> configMap;
         private readonly EventHandlerList eventHandlers;
+        private readonly IMessageHub messageHub;
         private readonly IObservableCondition preJoinAck;
+        private readonly IObservableCondition preOutSend;
         private readonly object ReadAckEvent = new object();
         private readonly object WriteAckEvent = new object();
         private readonly object JoinAckEvent = new object();
         private readonly CurrentOperation op;
         private readonly BlockingCollection<OperationRequest> operationQueue;
+        private readonly IMessageSerializer serializer;
 
         public ReaderWriter(INode creator,
                             IMessageHub messageHub,
-                            ConcurrentDictionary<IConfigurationIndex, IConfiguration> configMap)
+                            ConcurrentDictionary<IConfigurationIndex, IConfiguration> configMap,
+                            IMessageSerializer serializer)
         {
+            this.serializer = serializer;
             op = new CurrentOperation
                  {
                      Phase = new AtomicObservable<OperationPhase>(OperationPhase.Idle)
                  };
             this.creator = creator;
             this.configMap = configMap;
-            value = new ObjectValue<T>
-                    {
-                        Value = default(T)
-                    };
+            this.messageHub = messageHub;
+            value = new ObjectValue {Value = 0};
             tag = new Tag(creator);
             localPhase = new PhaseNumber();
             operationQueue = new BlockingCollection<OperationRequest>(new ConcurrentQueue<OperationRequest>());
@@ -49,15 +53,68 @@ namespace rambo.Implementation
             world = new ConcurrentDictionary<int, INode>();
 
             preJoinAck = new ObservableCondition(() => status.Get() == NodeStatus.Active, new[] {status});
-            new Thread(ProcessReadWriteREquests).Start();
+            preOutSend = new ObservableCondition(() => status.Get() == NodeStatus.Active, new[] {status});
+            new Thread(ProcessReadWriteRequests).Start();
             new Thread(OutJoinAck).Start();
+            new Thread(OutSend).Start();
             var listener = messageHub.Subscribe(creator);
             listener.Where(m => m.Body.MessageType.ToMessageType() == MessageTypes.JoinRw)
                     .Subscribe(new MessageStreamListener(OnJoinReceived));
+            listener.Where(m => m.Body.MessageType.ToMessageType() == MessageTypes.Gossip)
+                    .Subscribe(new MessageStreamListener(OnGossipReceived));
+        }
+
+        /// <summary>
+        /// recv(world; v; t; cm; snder-phase; rcver-phasei)j;i
+        /// </summary>
+        /// <param name="obj"></param>
+        private void OnGossipReceived(IMessage obj)
+        {
+            if (!IsIdleOrFailed())
+            {
+                var gossip = serializer.Deserialize<Gossip>(obj.Body.Content);
+                status.Set(NodeStatus.Active);
+                MergeWorld(world, gossip.World);
+            }
+        }
+
+        private void MergeWorld(IDictionary<int, INode> localWorld, IEnumerable<INode> senderWorld)
+        {
+            foreach (var node in senderWorld)
+            {
+                localWorld[node.Id] = node;
+            }
+        }
+
+        /// <summary>
+        /// send(world; v; t; cm; snder-phase; rcver-phasei)i;j
+        /// </summary>
+        private void OutSend()
+        {
+            while (true)
+            {
+                preOutSend.Waitable.WaitOne();
+
+                foreach (var node in world.Values)
+                {
+                    messageHub.Send(creator,
+                                    new GossipMessage(creator,
+                                                      new Gossip
+                                                      {
+                                                          Value = value,
+                                                          Tag = tag,
+                                                          World = world.Values.ToArray(),
+                                                          SenderPhase = localPhase,
+                                                          ReceiverPhase = phaseVector[node],
+                                                          Configurations = configMap
+                                                      },
+                                                      serializer));
+                }
+            }
         }
 
         // TODO: Think of queueing recon() and fail() operations to be executed sequentually
-        private void ProcessReadWriteREquests()
+        private void ProcessReadWriteRequests()
         {
             foreach (var operationRequest in operationQueue.GetConsumingEnumerable())
             {
@@ -112,8 +169,8 @@ namespace rambo.Implementation
             {
                 localPhase.Increment();
                 op.PhaseNumber = localPhase;
-                op.ConfigurationMap =
-                    op.Accepted = new ConcurrentDictionary<int, INode>();
+                op.ConfigurationMap = configMap;
+                op.Accepted = new ConcurrentDictionary<int, INode>();
                 op.Phase.Set(OperationPhase.Query);
                 op.Type.Set(OperationType.Read);
             }
@@ -138,6 +195,13 @@ namespace rambo.Implementation
         {
             if (!IsIdleOrFailed())
             {
+                localPhase.Increment();
+                op.PhaseNumber = localPhase;
+                op.Accepted = new ConcurrentDictionary<int, INode>();
+                op.Value = v;
+                op.ConfigurationMap = configMap;
+                op.Phase.Set(OperationPhase.Query);
+                op.Type.Set(OperationType.Write);
             }
         }
 

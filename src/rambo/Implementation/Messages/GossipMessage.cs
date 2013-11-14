@@ -3,15 +3,15 @@ using rambo.Messaging;
 
 namespace rambo.Implementation.Messages
 {
-    public class JoinRwMessage : IMessage
+    public class GossipMessage : IMessage
     {
-        public JoinRwMessage(INode sender)
+        public GossipMessage(INode sender, Gossip gossip, IMessageSerializer serializer)
         {
             Envelope = new Envelope {Sender = new Sender {Node = sender}};
             Body = new Body
                    {
-                       MessageType = MessageTypes.JoinRw.ToMessageType(),
-                       Content = new byte[0]
+                       MessageType = MessageTypes.Gossip.ToMessageType(),
+                       Content = serializer.Serialize(gossip)
                    };
         }
 

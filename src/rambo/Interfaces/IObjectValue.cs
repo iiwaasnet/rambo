@@ -1,7 +1,7 @@
 ﻿namespace rambo.Interfaces
 {
-    public interface IObjectValue<T>
+    public interface IObjectValue
     {
-        T Value { get; }
+        object Value { get; }
     }
 }
