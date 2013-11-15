@@ -16,8 +16,8 @@ namespace rambo.Implementation
         private readonly ConcurrentDictionary<int, INode> world;
         private readonly INode creator;
         private IObjectValue value;
-        private readonly ITag tag;
-        private readonly IPhaseNumber localPhase;
+        private ITag tag;
+        private IPhaseNumber localPhase;
         private readonly ConcurrentDictionary<INode, IPhaseNumber> phaseVector;
         private readonly ConcurrentDictionary<IConfigurationIndex, IConfiguration> configMap;
         private readonly EventHandlerList eventHandlers;
@@ -28,6 +28,7 @@ namespace rambo.Implementation
         private readonly object WriteAckEvent = new object();
         private readonly object JoinAckEvent = new object();
         private readonly CurrentOperation op;
+        private readonly GarbageCollectionOperation gc;
         private readonly BlockingCollection<OperationRequest> operationQueue;
         private readonly IMessageSerializer serializer;
 
@@ -37,10 +38,8 @@ namespace rambo.Implementation
                             IMessageSerializer serializer)
         {
             this.serializer = serializer;
-            op = new CurrentOperation
-                 {
-                     Phase = new AtomicObservable<OperationPhase>(OperationPhase.Idle)
-                 };
+            op = new CurrentOperation{Phase = new AtomicObservable<OperationPhase>(OperationPhase.Idle)};
+            gc = new GarbageCollectionOperation{Phase = new AtomicObservable<OperationPhase>(OperationPhase.Idle)};
             this.creator = creator;
             this.configMap = configMap;
             this.messageHub = messageHub;
@@ -67,14 +66,100 @@ namespace rambo.Implementation
         /// <summary>
         /// recv(world; v; t; cm; snder-phase; rcver-phasei)j;i
         /// </summary>
-        /// <param name="obj"></param>
-        private void OnGossipReceived(IMessage obj)
+        /// <param name="message"></param>
+        private void OnGossipReceived(IMessage message)
         {
             if (!IsIdleOrFailed())
             {
-                var gossip = serializer.Deserialize<Gossip>(obj.Body.Content);
+                var gossip = serializer.Deserialize<Gossip>(message.Body.Content);
                 status.Set(NodeStatus.Active);
                 MergeWorld(world, gossip.World);
+                if (gossip.Tag.GreaterThan(tag))
+                {
+                    value = gossip.Value;
+                    tag = gossip.Tag;
+                }
+                UpdateConfigurationMap(configMap, gossip.Configurations);
+                if (gossip.SenderPhase.Number > phaseVector[message.Envelope.Sender.Node].Number)
+                {
+                    phaseVector[message.Envelope.Sender.Node] = gossip.SenderPhase;
+                }
+                var opPhase = op.Phase.Get();
+                if (opPhase == OperationPhase.Query || opPhase == OperationPhase.Propagation)
+                {
+                    if (gossip.ReceiverPhase.Number >= op.PhaseNumber.Number)
+                    {
+                        ExtendConfigurationMap(op.ConfigurationMap, gossip.Configurations);
+                        if (Usable(op.ConfigurationMap))
+                        {
+                            op.Accepted[message.Envelope.Sender.Node.Id] = message.Envelope.Sender.Node;
+                        }
+                        else
+                        {
+                            localPhase.Increment();
+                            op.Accepted = new ConcurrentDictionary<int, INode>();
+                            op.ConfigurationMap = configMap;
+                        }
+                    }
+                    if (gossip.ReceiverPhase.Number >= gc.PhaseNumber.Number)
+                    {
+                        gc.Accepted[message.Envelope.Sender.Node.Id] = message.Envelope.Sender.Node;
+                    }
+                }
+            }
+        }
+
+        private bool Usable(ConcurrentDictionary<IConfigurationIndex, IConfiguration> configurationMap)
+        {
+            var gc = configurationMap.Where(entry => entry.Value.State == ConfigurationState.GCed);
+            var active = configurationMap.Where(entry => entry.Value.State == ConfigurationState.Active);
+
+            return MonitonicallyIncreasing(gc.Select(c => c.Key), active.Select(c => c.Key));
+        }
+
+        private bool MonitonicallyIncreasing(IEnumerable<IConfigurationIndex> gc, IEnumerable<IConfigurationIndex> active)
+        {
+            var indices = gc.OrderBy(i => i.Id).Concat(active.OrderBy(i => i.Id));
+
+            var first = indices.First();
+            
+            foreach (var next in indices.Skip(1))
+            {
+                if (first.Id != next.Id + 1)
+                {
+                    return false;
+                }
+                first = next;
+            }
+
+            return true;
+        }
+
+        private void ExtendConfigurationMap(ConcurrentDictionary<IConfigurationIndex, IConfiguration> localConfiguration,
+            IDictionary<IConfigurationIndex, IConfiguration> senderConfig)
+        {
+            foreach (var configuration in senderConfig)
+            {
+                if (!localConfiguration.ContainsKey(configuration.Key))
+                {
+                    localConfiguration[configuration.Key] = configuration.Value;
+                }
+            }
+        }
+
+        private void UpdateConfigurationMap(ConcurrentDictionary<IConfigurationIndex, IConfiguration> localConfiguration,
+                                            IDictionary<IConfigurationIndex, IConfiguration> senderConfig)
+        {
+            foreach (var configuration in senderConfig)
+            {
+                if (configuration.Value.State == ConfigurationState.GCed || localConfiguration[configuration.Key].State == ConfigurationState.GCed)
+                {
+                    localConfiguration[configuration.Key] = new GarbageCollectedConfiguration(configuration.Key);
+                }
+                else if (configuration.Value.State == ConfigurationState.Active)
+                {
+                    localConfiguration[configuration.Key] = configuration.Value;
+                }
             }
         }
 

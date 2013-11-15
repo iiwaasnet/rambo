@@ -100,6 +100,8 @@
   <ItemGroup>
     <Compile Include="Implementation\AtomicObservable.cs" />
     <Compile Include="Implementation\CurrentOperation.cs" />
+    <Compile Include="Implementation\GarbageCollectedConfiguration.cs" />
+    <Compile Include="Implementation\GarbageCollectionOperation.cs" />
     <Compile Include="Implementation\Gossip.cs" />
     <Compile Include="Implementation\MessageSerializer.cs" />
     <Compile Include="Implementation\MessageStreamListener.cs" />
@@ -110,6 +112,7 @@
     <Compile Include="Implementation\OperationRequest.cs" />
     <Compile Include="Implementation\OperationType.cs" />
     <Compile Include="Implementation\Recon.cs" />
+    <Compile Include="Interfaces\ConfigurationState.cs" />
     <Compile Include="Interfaces\IAtomicObservable.cs" />
     <Compile Include="Interfaces\IChangeNotifiable.cs" />
     <Compile Include="Interfaces\IConfiguration.cs" />
