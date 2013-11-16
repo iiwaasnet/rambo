@@ -5,13 +5,13 @@ using rambo.Interfaces;
 
 namespace rambo.Implementation
 {
-    public class AtomicObservable<T> : IAtomicObservable<T>
+    public class ObservableAtomicValue<T> : IObservableAtomicValue<T>
     {
         private readonly EventHandlerList eventHandlers;
         private readonly object ChangedEvent = new object();
         private Func<T> value;
 
-        public AtomicObservable(T value)
+        public ObservableAtomicValue(T value)
         {
             eventHandlers = new EventHandlerList();
             this.value = () => value;

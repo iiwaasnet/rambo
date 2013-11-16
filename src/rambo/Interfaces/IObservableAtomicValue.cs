@@ -1,7 +1,7 @@
 ﻿namespace rambo.Interfaces
 {
 
-    public interface IAtomicObservable<T> : IChangeNotifiable
+    public interface IObservableAtomicValue<T> : IChangeNotifiable
     {
         void Set(T value);
 

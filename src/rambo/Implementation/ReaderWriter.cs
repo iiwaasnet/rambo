@@ -12,55 +12,95 @@ namespace rambo.Implementation
 {
     public class ReaderWriter : IReaderWriter
     {
-        private readonly IAtomicObservable<NodeStatus> status;
-        private readonly ConcurrentDictionary<int, INode> world;
-        private readonly INode creator;
-        private IObjectValue value;
-        private ITag tag;
-        private IPhaseNumber localPhase;
-        private readonly ConcurrentDictionary<INode, IPhaseNumber> phaseVector;
-        private readonly ConcurrentDictionary<IConfigurationIndex, IConfiguration> configMap;
-        private readonly EventHandlerList eventHandlers;
-        private readonly IMessageHub messageHub;
-        private readonly IObservableCondition preJoinAck;
-        private readonly IObservableCondition preOutSend;
+        private readonly object JoinAckEvent = new object();
         private readonly object ReadAckEvent = new object();
         private readonly object WriteAckEvent = new object();
-        private readonly object JoinAckEvent = new object();
-        private readonly CurrentOperation op;
+        private readonly IObservableConcurrentDictionary<IConfigurationIndex, IConfiguration> configMap;
+        private readonly INode creator;
+        private readonly EventHandlerList eventHandlers;
         private readonly GarbageCollectionOperation gc;
+        private readonly IMessageHub messageHub;
+        private readonly CurrentOperation op;
         private readonly BlockingCollection<OperationRequest> operationQueue;
+        private readonly IObservableConcurrentDictionary<INode, IPhaseNumber> phaseVector;
+        private readonly IObservableCondition preJoinAck;
+        private readonly IObservableCondition preOutSend;
+        private readonly IObservableCondition preQueryFix;
         private readonly IMessageSerializer serializer;
+        private readonly IObservableAtomicValue<NodeStatus> status;
+        private readonly IObservableConcurrentDictionary<int, INode> world;
+        private IPhaseNumber localPhase;
+        private ITag tag;
+        private IObjectValue value;
 
         public ReaderWriter(INode creator,
                             IMessageHub messageHub,
-                            ConcurrentDictionary<IConfigurationIndex, IConfiguration> configMap,
+                            IEnumerable<KeyValuePair<IConfigurationIndex, IConfiguration>> configMap,
                             IMessageSerializer serializer)
         {
             this.serializer = serializer;
-            op = new CurrentOperation{Phase = new AtomicObservable<OperationPhase>(OperationPhase.Idle)};
-            gc = new GarbageCollectionOperation{Phase = new AtomicObservable<OperationPhase>(OperationPhase.Idle)};
+            op = new CurrentOperation {Phase = new ObservableAtomicValue<OperationPhase>(OperationPhase.Idle)};
+            gc = new GarbageCollectionOperation {Phase = new ObservableAtomicValue<OperationPhase>(OperationPhase.Idle)};
             this.creator = creator;
-            this.configMap = configMap;
+            this.configMap = new ObservableConcurrentDictionary<IConfigurationIndex, IConfiguration>(configMap);
             this.messageHub = messageHub;
             value = new ObjectValue {Value = 0};
             tag = new Tag(creator);
             localPhase = new PhaseNumber();
             operationQueue = new BlockingCollection<OperationRequest>(new ConcurrentQueue<OperationRequest>());
             eventHandlers = new EventHandlerList();
-            status = new AtomicObservable<NodeStatus>(NodeStatus.Idle);
-            world = new ConcurrentDictionary<int, INode>();
+            status = new ObservableAtomicValue<NodeStatus>(NodeStatus.Idle);
+            world = new ObservableConcurrentDictionary<int, INode>();
+            phaseVector = new ObservableConcurrentDictionary<INode, IPhaseNumber>();
 
             preJoinAck = new ObservableCondition(() => status.Get() == NodeStatus.Active, new[] {status});
             preOutSend = new ObservableCondition(() => status.Get() == NodeStatus.Active, new[] {status});
+            preQueryFix = new ObservableCondition(() => status.Get() == NodeStatus.Active
+                                                        && (op.Type.Get() == OperationType.Read || op.Type.Get() == OperationType.Write)
+                                                        && op.Phase.Get() == OperationPhase.Query,
+                                                  new IChangeNotifiable[] {status, op.Type, op.Phase});
             new Thread(ProcessReadWriteRequests).Start();
             new Thread(OutJoinAck).Start();
             new Thread(OutSend).Start();
+            new Thread(IntQueryFix).Start();
             var listener = messageHub.Subscribe(creator);
             listener.Where(m => m.Body.MessageType.ToMessageType() == MessageTypes.JoinRw)
                     .Subscribe(new MessageStreamListener(OnJoinReceived));
             listener.Where(m => m.Body.MessageType.ToMessageType() == MessageTypes.Gossip)
                     .Subscribe(new MessageStreamListener(OnGossipReceived));
+        }
+
+        public void Read(IObjectId x)
+        {
+            operationQueue.Add(new OperationRequest {OpType = OperationType.Read, Id = x});
+        }
+
+        public void Write(IObjectId x, IObjectValue v)
+        {
+            operationQueue.Add(new OperationRequest
+                               {
+                                   OpType = OperationType.Write,
+                                   Id = x,
+                                   Value = v
+                               });
+        }
+
+        public void Fail()
+        {
+            status.Set(NodeStatus.Failed);
+        }
+
+        /// <summary>
+        /// Input join(rw)i
+        /// </summary>
+        /// <param name="i">Joiner</param>
+        public void Join(INode i)
+        {
+            if (status.Get() == NodeStatus.Idle)
+            {
+                world[i.Id] = i;
+                status.Set((creator.Equals(i) ? NodeStatus.Active : NodeStatus.Joining));
+            }
         }
 
         /// <summary>
@@ -109,7 +149,7 @@ namespace rambo.Implementation
             }
         }
 
-        private bool Usable(ConcurrentDictionary<IConfigurationIndex, IConfiguration> configurationMap)
+        private bool Usable(IObservableConcurrentDictionary<IConfigurationIndex, IConfiguration> configurationMap)
         {
             var gc = configurationMap.Where(entry => entry.Value.State == ConfigurationState.GCed);
             var active = configurationMap.Where(entry => entry.Value.State == ConfigurationState.Active);
@@ -122,7 +162,7 @@ namespace rambo.Implementation
             var indices = gc.OrderBy(i => i.Id).Concat(active.OrderBy(i => i.Id));
 
             var first = indices.First();
-            
+
             foreach (var next in indices.Skip(1))
             {
                 if (first.Id != next.Id + 1)
@@ -135,8 +175,8 @@ namespace rambo.Implementation
             return true;
         }
 
-        private void ExtendConfigurationMap(ConcurrentDictionary<IConfigurationIndex, IConfiguration> localConfiguration,
-            IDictionary<IConfigurationIndex, IConfiguration> senderConfig)
+        private void ExtendConfigurationMap(IObservableConcurrentDictionary<IConfigurationIndex, IConfiguration> localConfiguration,
+                                            IEnumerable<KeyValuePair<IConfigurationIndex, IConfiguration>> senderConfig)
         {
             foreach (var configuration in senderConfig)
             {
@@ -147,8 +187,8 @@ namespace rambo.Implementation
             }
         }
 
-        private void UpdateConfigurationMap(ConcurrentDictionary<IConfigurationIndex, IConfiguration> localConfiguration,
-                                            IDictionary<IConfigurationIndex, IConfiguration> senderConfig)
+        private void UpdateConfigurationMap(IObservableConcurrentDictionary<IConfigurationIndex, IConfiguration> localConfiguration,
+                                            IEnumerable<KeyValuePair<IConfigurationIndex, IConfiguration>> senderConfig)
         {
             foreach (var configuration in senderConfig)
             {
@@ -163,7 +203,7 @@ namespace rambo.Implementation
             }
         }
 
-        private void MergeWorld(IDictionary<int, INode> localWorld, IEnumerable<INode> senderWorld)
+        private void MergeWorld(IObservableConcurrentDictionary<int, INode> localWorld, IEnumerable<INode> senderWorld)
         {
             foreach (var node in senderWorld)
             {
@@ -261,21 +301,6 @@ namespace rambo.Implementation
             }
         }
 
-        public void Read(IObjectId x)
-        {
-            operationQueue.Add(new OperationRequest {OpType = OperationType.Read, Id = x});
-        }
-
-        public void Write(IObjectId x, IObjectValue v)
-        {
-            operationQueue.Add(new OperationRequest
-                               {
-                                   OpType = OperationType.Write,
-                                   Id = x,
-                                   Value = v
-                               });
-        }
-
         private void InternalWrite(IObjectId x, IObjectValue v)
         {
             if (!IsIdleOrFailed())
@@ -290,21 +315,13 @@ namespace rambo.Implementation
             }
         }
 
-        public void Fail()
-        {
-            status.Set(NodeStatus.Failed);
-        }
-
         /// <summary>
-        /// Input join(rw)i
+        /// query-fix i
         /// </summary>
-        /// <param name="i">Joiner</param>
-        public void Join(INode i)
+        private void IntQueryFix()
         {
-            if (status.Get() == NodeStatus.Idle)
+            while (true)
             {
-                world[i.Id] = i;
-                status.Set((creator.Equals(i) ? NodeStatus.Active : NodeStatus.Joining));
             }
         }
 

@@ -8,7 +8,7 @@ namespace rambo.Implementation
         public IEnumerable<INode> World { get; set; }
         public IObjectValue Value { get; set; }
         public ITag Tag { get; set; }
-        public IDictionary<IConfigurationIndex, IConfiguration> Configurations { get; set; }
+        public IObservableConcurrentDictionary<IConfigurationIndex, IConfiguration> Configurations { get; set; }
         public IPhaseNumber SenderPhase { get; set; }
         public IPhaseNumber ReceiverPhase { get; set; }
     }

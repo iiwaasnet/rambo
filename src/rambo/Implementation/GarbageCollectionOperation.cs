@@ -5,7 +5,7 @@ namespace rambo.Implementation
 {
     internal class GarbageCollectionOperation
     {
-        internal IAtomicObservable<OperationPhase> Phase { get; set; }
+        internal IObservableAtomicValue<OperationPhase> Phase { get; set; }
         internal IPhaseNumber PhaseNumber { get; set; }
         internal ConcurrentDictionary<IConfigurationIndex, IConfiguration> ConfigurationMap { get; set; }
         internal ConcurrentDictionary<int, INode> Accepted { get; set; }

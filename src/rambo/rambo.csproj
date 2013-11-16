@@ -98,7 +98,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Implementation\AtomicObservable.cs" />
+    <Compile Include="Implementation\ObservableAtomicValue.cs" />
     <Compile Include="Implementation\CurrentOperation.cs" />
     <Compile Include="Implementation\GarbageCollectedConfiguration.cs" />
     <Compile Include="Implementation\GarbageCollectionOperation.cs" />
@@ -113,7 +113,8 @@
     <Compile Include="Implementation\OperationType.cs" />
     <Compile Include="Implementation\Recon.cs" />
     <Compile Include="Interfaces\ConfigurationState.cs" />
-    <Compile Include="Interfaces\IAtomicObservable.cs" />
+    <Compile Include="Interfaces\IObservableConcurrentDictionary.cs" />
+    <Compile Include="Interfaces\IObservableAtomicValue.cs" />
     <Compile Include="Interfaces\IChangeNotifiable.cs" />
     <Compile Include="Interfaces\IConfiguration.cs" />
     <Compile Include="Interfaces\IConfigurationIndex.cs" />
@@ -135,6 +136,7 @@
     <Compile Include="Implementation\PhaseNumber.cs" />
     <Compile Include="Implementation\ObjectValue.cs" />
     <Compile Include="Implementation\Tag.cs" />
+    <Compile Include="Implementation\ObservableConcurrentDictionary.cs" />
     <Compile Include="MainModule.cs" />
     <Compile Include="Messaging\Body.cs" />
     <Compile Include="Messaging\BroadcastRequest.cs" />

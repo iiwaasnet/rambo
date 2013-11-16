@@ -13,10 +13,10 @@ namespace rambo.Implementation
         private readonly IReaderWriter readerWriter;
         private readonly EventHandlerList eventHandlers;
         private readonly IRecon recon;
-        private readonly IAtomicObservable<NodeStatus> status;
-        private readonly IAtomicObservable<NodeStatus> reconStatus;
-        private readonly IAtomicObservable<NodeStatus> rwStatus;
-        private readonly IAtomicObservable<IEnumerable<INode>> hints;
+        private readonly IObservableAtomicValue<NodeStatus> status;
+        private readonly IObservableAtomicValue<NodeStatus> reconStatus;
+        private readonly IObservableAtomicValue<NodeStatus> rwStatus;
+        private readonly IObservableAtomicValue<IEnumerable<INode>> hints;
         private readonly IObservableCondition preJoinRw;
         private readonly IObservableCondition preJoinRecon;
         private readonly IObservableCondition preJoin;
@@ -30,10 +30,10 @@ namespace rambo.Implementation
             this.i = i;
             this.messageHub = messageHub;
             eventHandlers = new EventHandlerList();
-            status = new AtomicObservable<NodeStatus>(NodeStatus.Idle);
-            reconStatus = new AtomicObservable<NodeStatus>(NodeStatus.Idle);
-            rwStatus = new AtomicObservable<NodeStatus>(NodeStatus.Idle);
-            hints = new AtomicObservable<IEnumerable<INode>>(Enumerable.Empty<INode>());
+            status = new ObservableAtomicValue<NodeStatus>(NodeStatus.Idle);
+            reconStatus = new ObservableAtomicValue<NodeStatus>(NodeStatus.Idle);
+            rwStatus = new ObservableAtomicValue<NodeStatus>(NodeStatus.Idle);
+            hints = new ObservableAtomicValue<IEnumerable<INode>>(Enumerable.Empty<INode>());
 
             preJoinRw = new ObservableCondition(() => status.Get() == NodeStatus.Joining
                                                       && rwStatus.Get() == NodeStatus.Idle,
