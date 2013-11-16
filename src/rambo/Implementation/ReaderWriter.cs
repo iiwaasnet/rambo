@@ -55,10 +55,8 @@ namespace rambo.Implementation
 
             preJoinAck = new ObservableCondition(() => status.Get() == NodeStatus.Active, new[] {status});
             preOutSend = new ObservableCondition(() => status.Get() == NodeStatus.Active, new[] {status});
-            preQueryFix = new ObservableCondition(() => status.Get() == NodeStatus.Active
-                                                        && (op.Type.Get() == OperationType.Read || op.Type.Get() == OperationType.Write)
-                                                        && op.Phase.Get() == OperationPhase.Query,
-                                                  new IChangeNotifiable[] {status, op.Type, op.Phase});
+            preQueryFix = new ObservableCondition(QueryFixCondition,
+                                                  new IChangeNotifiable[] {status, op.Type, op.Phase, op.Accepted, op.ConfigurationMap});
             new Thread(ProcessReadWriteRequests).Start();
             new Thread(OutJoinAck).Start();
             new Thread(OutSend).Start();
@@ -68,6 +66,38 @@ namespace rambo.Implementation
                     .Subscribe(new MessageStreamListener(OnJoinReceived));
             listener.Where(m => m.Body.MessageType.ToMessageType() == MessageTypes.Gossip)
                     .Subscribe(new MessageStreamListener(OnGossipReceived));
+        }
+
+        private bool QueryFixCondition()
+        {
+            var operationType = op.Type.Get();
+
+            return status.Get() == NodeStatus.Active
+                   && (operationType == OperationType.Read || operationType == OperationType.Write)
+                   && op.Phase.Get() == OperationPhase.Query
+                   && QuorumReached(op.ConfigurationMap, op.Accepted);
+        }
+
+        private bool QuorumReached(IEnumerable<KeyValuePair<IConfigurationIndex, IConfiguration>> configurationMap,
+                                   IEnumerable<KeyValuePair<int, INode>> accepted)
+        {
+            return configurationMap
+                .Where(c => c.Value.State == ConfigurationState.Active)
+                .Select(c => c.Value)
+                .All(c => QuorumReached(c, accepted));
+        }
+
+        private bool QuorumReached(IConfiguration config, IEnumerable<KeyValuePair<int, INode>> accepted)
+        {
+            return config
+                       .Nodes
+                       .Join(accepted, c => c.Id, a => a.Value.Id, (n, acc) => n.Id)
+                       .Count() >= QuorumSize(config.Nodes);
+        }
+
+        private int QuorumSize(IEnumerable<INode> nodes)
+        {
+            return nodes.Count() / 2 + 1;
         }
 
         public void Read(IObjectId x)
@@ -137,7 +167,7 @@ namespace rambo.Implementation
                         else
                         {
                             localPhase.Increment();
-                            op.Accepted = new ConcurrentDictionary<int, INode>();
+                            op.Accepted = new ObservableConcurrentDictionary<int, INode>();
                             op.ConfigurationMap = configMap;
                         }
                     }
