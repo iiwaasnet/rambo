@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.Contracts;
+using System.Linq;
 using rambo.Interfaces;
 using rambo.Messaging;
 
@@ -16,9 +18,15 @@ namespace rambo.Implementation
 
         public Rambo(INode creator,
                      IMessageHub messageHub,
-                     IEnumerable<KeyValuePair<IConfigurationIndex, IConfiguration>> initialConfig,
+                     IEnumerable<IConfiguration> initialConfig,
                      IMessageSerializer messageSerializer)
         {
+            Contract.Requires(creator != null);
+            Contract.Requires(messageHub != null);
+            Contract.Requires(messageHub != null);
+            Contract.Requires(initialConfig != null && initialConfig.Any());
+
+            Node = creator;
             eventHandlers = new EventHandlerList();
             readerWriter = new ReaderWriter(creator, messageHub, initialConfig, messageSerializer);
             recon = new Recon();
@@ -90,5 +98,7 @@ namespace rambo.Implementation
             add { eventHandlers.AddHandler(WriteAckEvent, value); }
             remove { eventHandlers.RemoveHandler(WriteAckEvent, value); }
         }
+
+        public INode Node { get; private set; }
     }
 }

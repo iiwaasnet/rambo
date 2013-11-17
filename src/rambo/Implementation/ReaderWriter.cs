@@ -32,20 +32,20 @@ namespace rambo.Implementation
         private readonly IMessageSerializer serializer;
         private readonly IObservableAtomicValue<NodeStatus> status;
         private readonly IObservableConcurrentDictionary<int, INode> world;
-        private IPhaseNumber localPhase;
+        private readonly IPhaseNumber localPhase;
         private ITag tag;
         private IObjectValue value;
 
         public ReaderWriter(INode creator,
                             IMessageHub messageHub,
-                            IEnumerable<KeyValuePair<IConfigurationIndex, IConfiguration>> configMap,
+                            IEnumerable<IConfiguration> configMap,
                             IMessageSerializer serializer)
         {
             this.serializer = serializer;
             op = new CurrentOperation {Phase = new ObservableAtomicValue<OperationPhase>(OperationPhase.Idle)};
             gc = new GarbageCollectionOperation {Phase = new ObservableAtomicValue<OperationPhase>(OperationPhase.Idle)};
             this.creator = creator;
-            this.configMap = new ObservableConcurrentDictionary<IConfigurationIndex, IConfiguration>(configMap);
+            this.configMap = new ObservableConcurrentDictionary<IConfigurationIndex, IConfiguration>(configMap.ToDictionary(c => c.Key, c => c));
             this.messageHub = messageHub;
             value = new ObjectValue {Value = 0};
             tag = new Tag(creator);

@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace rambo.Interfaces
 {
@@ -22,5 +21,6 @@ namespace rambo.Interfaces
         event ReadAckEventHandler ReadAck;
 
         event WriteAckEventHandler WriteAck;
+        INode Node { get; }
     }
 }

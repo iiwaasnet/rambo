@@ -2,7 +2,7 @@
 
 namespace rambo.Implementation
 {
-    internal class Tag : ITag
+    public class Tag : ITag
     {
         private class InternalTag
         {
