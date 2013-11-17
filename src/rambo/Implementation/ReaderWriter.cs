@@ -41,11 +41,18 @@ namespace rambo.Implementation
                             IEnumerable<IConfiguration> configMap,
                             IMessageSerializer serializer)
         {
+            var configurations = configMap.ToDictionary(c => c.Key, c => c);
             this.serializer = serializer;
-            op = new CurrentOperation {Phase = new ObservableAtomicValue<OperationPhase>(OperationPhase.Idle)};
+            op = new CurrentOperation
+                 {
+                     Phase = new ObservableAtomicValue<OperationPhase>(OperationPhase.Idle),
+                     Type = new ObservableAtomicValue<OperationType>(OperationType.Idle),
+                     Accepted = new ObservableConcurrentDictionary<int, INode>(Enumerable.Empty<KeyValuePair<int, INode>>()),
+                     ConfigurationMap = new ObservableConcurrentDictionary<IConfigurationIndex, IConfiguration>(configurations)
+                 };
             gc = new GarbageCollectionOperation {Phase = new ObservableAtomicValue<OperationPhase>(OperationPhase.Idle)};
             this.creator = creator;
-            this.configMap = new ObservableConcurrentDictionary<IConfigurationIndex, IConfiguration>(configMap.ToDictionary(c => c.Key, c => c));
+            this.configMap = new ObservableConcurrentDictionary<IConfigurationIndex, IConfiguration>(configurations);
             this.messageHub = messageHub;
             value = new ObjectValue {Value = 0};
             tag = new Tag(creator);
@@ -67,9 +74,9 @@ namespace rambo.Implementation
                                                        && op.Phase.Get() == OperationPhase.Done,
                                                  new IChangeNotifiable[] {status, op.Type, op.Phase});
             preWriteAck = new ObservableCondition(() => status.Get() == NodeStatus.Active
-                                                       && op.Type.Get() == OperationType.Write
-                                                       && op.Phase.Get() == OperationPhase.Done,
-                                                 new IChangeNotifiable[] {status, op.Type, op.Phase});
+                                                        && op.Type.Get() == OperationType.Write
+                                                        && op.Phase.Get() == OperationPhase.Done,
+                                                  new IChangeNotifiable[] {status, op.Type, op.Phase});
             new Thread(ProcessReadWriteRequests).Start();
             new Thread(OutJoinAck).Start();
             new Thread(OutSend).Start();

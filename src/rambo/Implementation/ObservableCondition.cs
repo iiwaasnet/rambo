@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
+using System.Linq;
 using System.Threading;
 using rambo.Interfaces;
 
@@ -12,6 +14,8 @@ namespace rambo.Implementation
 
         public ObservableCondition(Func<bool> condition, IEnumerable<IChangeNotifiable> members)
         {
+            Contract.Requires(members != null && members.All(m => m != null));
+
             this.condition = condition;
             waitHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
 
