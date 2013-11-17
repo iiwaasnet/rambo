@@ -8,7 +8,7 @@ namespace rambo.Implementation
 {
     public class ObservableConcurrentDictionary<K, V> : IObservableConcurrentDictionary<K, V>
     {
-        private readonly ConcurrentDictionary<K, V> storage;
+        private ConcurrentDictionary<K, V> storage;
         private readonly EventHandlerList eventHandlers;
         private readonly object ChangedEvent = new object();
 
@@ -27,6 +27,12 @@ namespace rambo.Implementation
         public int Count()
         {
             return storage.Count;
+        }
+
+        public void Set(IEnumerable<KeyValuePair<K, V>> collection)
+        {
+            storage = new ConcurrentDictionary<K, V>(collection);
+            OnChanged();
         }
 
         private void OnChanged()

@@ -8,6 +8,8 @@ namespace rambo.Interfaces
 
         bool ContainsKey(K key);
 
+        void Set(IEnumerable<KeyValuePair<K, V>> collection);
+
         IEnumerable<V> Values { get; }
 
         V this[K key] { get; set; }

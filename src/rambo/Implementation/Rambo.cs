@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics.Contracts;
 using rambo.Interfaces;
+using rambo.Messaging;
 
 namespace rambo.Implementation
 {
@@ -10,19 +9,22 @@ namespace rambo.Implementation
     {
         private readonly IJoiner joiner;
         private readonly IReaderWriter readerWriter;
-        private readonly IRecon recon; 
+        private readonly IRecon recon;
         private readonly EventHandlerList eventHandlers;
         private readonly object ReadAckEvent = new object();
         private readonly object WriteAckEvent = new object();
 
-        public Rambo()
+        public Rambo(INode creator,
+                     IMessageHub messageHub,
+                     IEnumerable<KeyValuePair<IConfigurationIndex, IConfiguration>> initialConfig,
+                     IMessageSerializer messageSerializer)
         {
             eventHandlers = new EventHandlerList();
-            readerWriter = new ReaderWriter();
+            readerWriter = new ReaderWriter(creator, messageHub, initialConfig, messageSerializer);
             recon = new Recon();
 
-            joiner = new Joiner(readerWriter, recon);
-            
+            joiner = new Joiner(creator, readerWriter, recon, messageHub);
+
             ConfigureService();
         }
 
@@ -34,7 +36,7 @@ namespace rambo.Implementation
 
         private void OnWriteAck(INode node)
         {
-            var handler = (WriteAckEventHandler)eventHandlers[WriteAckEvent];
+            var handler = eventHandlers[WriteAckEvent] as WriteAckEventHandler;
 
             if (handler != null)
             {
@@ -44,7 +46,7 @@ namespace rambo.Implementation
 
         private void OnReadAck(IObjectId objectId, IObjectValue objectValue)
         {
-            var handler = (ReadAckEventHandler)eventHandlers[ReadAckEvent];
+            var handler = eventHandlers[ReadAckEvent] as ReadAckEventHandler;
 
             if (handler != null)
             {

@@ -26,6 +26,9 @@ namespace rambo.Implementation
         private readonly IObservableCondition preJoinAck;
         private readonly IObservableCondition preOutSend;
         private readonly IObservableCondition preQueryFix;
+        private readonly IObservableCondition prePropagationFix;
+        private readonly IObservableCondition preReadAck;
+        private readonly IObservableCondition preWriteAck;
         private readonly IMessageSerializer serializer;
         private readonly IObservableAtomicValue<NodeStatus> status;
         private readonly IObservableConcurrentDictionary<int, INode> world;
@@ -57,15 +60,62 @@ namespace rambo.Implementation
             preOutSend = new ObservableCondition(() => status.Get() == NodeStatus.Active, new[] {status});
             preQueryFix = new ObservableCondition(QueryFixCondition,
                                                   new IChangeNotifiable[] {status, op.Type, op.Phase, op.Accepted, op.ConfigurationMap});
+            prePropagationFix = new ObservableCondition(PropagationFixCondition,
+                                                        new IChangeNotifiable[] {status, op.Type, op.Phase, op.Accepted, op.ConfigurationMap});
+            preReadAck = new ObservableCondition(() => status.Get() == NodeStatus.Active
+                                                       && op.Type.Get() == OperationType.Read
+                                                       && op.Phase.Get() == OperationPhase.Done,
+                                                 new IChangeNotifiable[] {status, op.Type, op.Phase});
+            preWriteAck = new ObservableCondition(() => status.Get() == NodeStatus.Active
+                                                       && op.Type.Get() == OperationType.Write
+                                                       && op.Phase.Get() == OperationPhase.Done,
+                                                 new IChangeNotifiable[] {status, op.Type, op.Phase});
             new Thread(ProcessReadWriteRequests).Start();
             new Thread(OutJoinAck).Start();
             new Thread(OutSend).Start();
             new Thread(IntQueryFix).Start();
+            new Thread(IntPropagationFix).Start();
+            new Thread(OutReadAck).Start();
+            new Thread(OutWriteAck).Start();
             var listener = messageHub.Subscribe(creator);
             listener.Where(m => m.Body.MessageType.ToMessageType() == MessageTypes.JoinRw)
                     .Subscribe(new MessageStreamListener(OnJoinReceived));
             listener.Where(m => m.Body.MessageType.ToMessageType() == MessageTypes.Gossip)
                     .Subscribe(new MessageStreamListener(OnGossipReceived));
+        }
+
+        private void OutWriteAck()
+        {
+            preWriteAck.Waitable.WaitOne();
+
+            var handler = eventHandlers[ReadAckEvent] as WriteAckEventHandler;
+            if (handler != null)
+            {
+                handler(creator);
+            }
+            op.Phase.Set(OperationPhase.Idle);
+        }
+
+        private void OutReadAck()
+        {
+            preReadAck.Waitable.WaitOne();
+
+            var handler = eventHandlers[ReadAckEvent] as ReadAckEventHandler;
+            if (handler != null)
+            {
+                handler(null, op.Value);
+            }
+            op.Phase.Set(OperationPhase.Idle);
+        }
+
+        private bool PropagationFixCondition()
+        {
+            var operationType = op.Type.Get();
+
+            return status.Get() == NodeStatus.Active
+                   && (operationType == OperationType.Read || operationType == OperationType.Write)
+                   && op.Phase.Get() == OperationPhase.Propagation
+                   && QuorumReached(op.ConfigurationMap, op.Accepted);
         }
 
         private bool QueryFixCondition()
@@ -325,7 +375,7 @@ namespace rambo.Implementation
                 localPhase.Increment();
                 op.PhaseNumber = localPhase;
                 op.ConfigurationMap = configMap;
-                op.Accepted = new ConcurrentDictionary<int, INode>();
+                op.Accepted = new ObservableConcurrentDictionary<int, INode>();
                 op.Phase.Set(OperationPhase.Query);
                 op.Type.Set(OperationType.Read);
             }
@@ -337,7 +387,7 @@ namespace rambo.Implementation
             {
                 localPhase.Increment();
                 op.PhaseNumber = localPhase;
-                op.Accepted = new ConcurrentDictionary<int, INode>();
+                op.Accepted = new ObservableConcurrentDictionary<int, INode>();
                 op.Value = v;
                 op.ConfigurationMap = configMap;
                 op.Phase.Set(OperationPhase.Query);
@@ -350,9 +400,31 @@ namespace rambo.Implementation
         /// </summary>
         private void IntQueryFix()
         {
-            while (true)
+            preQueryFix.Waitable.WaitOne();
+
+            if (op.Type.Get() == OperationType.Read)
             {
+                op.Value = value;
             }
+            else
+            {
+                value = op.Value;
+                tag.Increment();
+                localPhase.Increment();
+            }
+            op.Accepted.Set(Enumerable.Empty<KeyValuePair<int, INode>>());
+            op.ConfigurationMap.Set(configMap);
+            op.Phase.Set(OperationPhase.Propagation);
+        }
+
+        /// <summary>
+        /// prop-fix i
+        /// </summary>
+        private void IntPropagationFix()
+        {
+            prePropagationFix.Waitable.WaitOne();
+
+            op.Phase.Set(OperationPhase.Done);
         }
 
         public event ReadAckEventHandler ReadAck

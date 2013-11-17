@@ -1,4 +1,6 @@
-﻿using rambo.Interfaces;
+﻿using System.Collections.Generic;
+using System.Linq;
+using rambo.Interfaces;
 
 namespace rambo.Implementation
 {
@@ -8,7 +10,10 @@ namespace rambo.Implementation
         {
             State = ConfigurationState.GCed;
             Key = key;
+            Nodes = Enumerable.Empty<INode>();
         }
+
+        public IEnumerable<INode> Nodes { get; private set; }
 
         public ConfigurationState State { get; private set; }
 
