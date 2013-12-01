@@ -4,6 +4,14 @@ namespace rambo.Implementation
 {
     public class Recon : IRecon
     {
+        private readonly IObservableAtomicValue<NodeStatus> status;
+        private readonly IObservableConcurrentDictionary<IConfigurationIndex, IConfiguration> configMap;
+
+        public Recon()
+        {
+            status = new ObservableAtomicValue<NodeStatus>(NodeStatus.Idle);
+        }
+
         public void Join(INode i)
         {
             throw new System.NotImplementedException();

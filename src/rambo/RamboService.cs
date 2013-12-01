@@ -35,6 +35,7 @@ namespace rambo
 
                 foreach (var rambo in farm)
                 {
+                    // NOTE: if i = i0 then J = ∅
                     rambo.Join(initialWorld);
                     rambo.WriteAck += OnWriteAck;
                     rambo.ReadAck += OnReadAck;

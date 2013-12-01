@@ -74,7 +74,7 @@ namespace rambo.Implementation
         }
 
         /// <summary>
-        /// send(join)i;j , j E I - {i}
+        /// send(join)i;j , j ∈ I - {i}
         /// </summary>
         private void OutSend()
         {
@@ -87,7 +87,7 @@ namespace rambo.Implementation
         }
 
         /// <summary>
-        /// Output join(r)i, r E frecon
+        /// Output join(r)i, r ∈ frecon
         /// </summary>
         private void OutJoinRecon()
         {
@@ -97,7 +97,7 @@ namespace rambo.Implementation
         }
 
         /// <summary>
-        /// Output join(r)i, r E rw
+        /// Output join(r)i, r ∈ rw
         /// </summary>
         private void OutJoinRw()
         {
